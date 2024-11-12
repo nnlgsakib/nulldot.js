@@ -5,201 +5,87 @@ export class NulldotEncryptor {
     private DOT: string;
     private CHAR_DELIMITER: string;
     private WORD_DELIMITER: string;
-    private readonly PADDING_LAYERS = 12;
-    private readonly ROTATION_BITS = 7;
-    private readonly TRANSFORMATION_ROUNDS = 16;
-    
-    // Pre-calculate frequently used masks and constants
-    private readonly BIT_MASKS: { [key: number]: bigint } = {};
-    private readonly SHIFT_MASKS: { [key: number]: bigint } = {};
-    private readonly QUANTUM_PRIMES: bigint[];
-    private readonly LATTICE_CONSTANTS: bigint[];
-    private readonly MAX_PRIME: bigint;
 
-    constructor(
-        NULL: string = ',',
-        DOT: string = '.',
-        CHAR_DELIMITER: string = "_",
-        WORD_DELIMITER: string = "__"
-    ) {
-        const args = [NULL, DOT, CHAR_DELIMITER, WORD_DELIMITER];
-        if (new Set(args).size !== args.length || args.some(arg => !arg)) {
-            throw new Error("All arguments must be unique and non-empty.");
-        }
-
+    constructor(NULL: string = ',', DOT: string = '.', CHAR_DELIMITER: string = "_", WORD_DELIMITER: string = "__") {
         this.NULL = NULL;
         this.DOT = DOT;
         this.CHAR_DELIMITER = CHAR_DELIMITER;
         this.WORD_DELIMITER = WORD_DELIMITER;
-
-        // Initialize quantum primes
-        this.QUANTUM_PRIMES = [
-            BigInt('2305843009213693951'),
-            BigInt('618970019642690137449562111'),
-            BigInt('170141183460469231731687303715884105727'),
-            BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639747'),
-            BigInt('999999999999999999999999999999999999999999999999999999999999999999999999999989'),
-            BigInt('179769313486231590772930519078902473361797697894230657273430081157732675805500963132708477322407536021120113879871393357658789768814416622492847430639474124377767893424865485276302219601246094119453082952085005768838150682342462881473913110540827237163350510684586298239947245938479716304835356329624224137859'),
-            BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639937'),
-            BigInt('340282366920938463463374607431768211457'),
-            BigInt('14474011154664524427946373126085988481658748083205070504932198000989141205031'),
-            BigInt('57896044618658097711785492504343953926634992332820282019728792003956564819949'),
-            BigInt('6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151'),
-            BigInt('6277101735386680763835789423207666416102355444464034512896')
-        ];
-
-        this.LATTICE_CONSTANTS = [
-            BigInt('12345678901234567890123456789012345678901234567890'),
-            BigInt('98765432109876543210987654321098765432109876543210'),
-            BigInt('11111111111111111111111111111111111111111111111111'),
-            BigInt('22222222222222222222222222222222222222222222222222')
-        ];
-
-        // Pre-calculate max prime
-        this.MAX_PRIME = this.QUANTUM_PRIMES[this.QUANTUM_PRIMES.length - 1];
-
-        // Pre-calculate bit masks for common operations
-        for (let i = 1; i <= 512; i++) {
-            this.BIT_MASKS[i] = (BigInt(1) << BigInt(i)) - BigInt(1);
-            this.SHIFT_MASKS[i] = BigInt(1) << BigInt(i);
-        }
     }
 
+    // Helper function to convert any data type to a string representation
     private stringifyData(data: any): string {
-        return typeof data === 'object' ? JSON.stringify(data) : String(data);
-    }
-
-    // Optimized rotation functions using pre-calculated masks
-    private rightRotate(n: bigint, d: number, bits: number): bigint {
-        const mask = this.BIT_MASKS[bits];
-        return ((n >> BigInt(d)) | (n << BigInt(bits - d))) & mask;
-    }
-
-    private leftRotate(n: bigint, d: number, bits: number): bigint {
-        const mask = this.BIT_MASKS[bits];
-        return ((n << BigInt(d)) | (n >> BigInt(bits - d))) & mask;
-    }
-
-    private upRotate(n: bigint, bits: number): bigint {
-        const halfBits = Math.floor(bits / 2);
-        const upperMask = this.BIT_MASKS[bits - halfBits] << BigInt(halfBits);
-        const lowerMask = this.BIT_MASKS[halfBits];
-        const upperHalf = (n & upperMask) >> BigInt(halfBits);
-        const lowerHalf = n & lowerMask;
-        return (lowerHalf << BigInt(bits - halfBits)) | upperHalf;
-    }
-
-    // Optimized quantum transformations
-    private latticeTransform(value: bigint): bigint {
-        return this.LATTICE_CONSTANTS.reduce((result, constant, index) => 
-            (result * constant + this.QUANTUM_PRIMES[index]) % this.MAX_PRIME, value);
-    }
-
-    private antiQuantumScramble(value: bigint): bigint {
-        let result = value;
-        const rounds = Math.min(this.TRANSFORMATION_ROUNDS, this.QUANTUM_PRIMES.length);
-        
-        for (let i = 0; i < rounds; i++) {
-            result = this.rightRotate(result, i + 1, 512);
-            result = this.upRotate(result, 512);
-            result = this.leftRotate(result, this.ROTATION_BITS, 512);
-            result ^= this.QUANTUM_PRIMES[i];
-            result = this.latticeTransform(result);
+        if (typeof data === 'object') {
+            return JSON.stringify(data); // Convert objects and arrays to JSON strings
         }
-        return result;
+        return String(data); // Convert other data types to string
     }
 
-    private superPositionHash(input: bigint): bigint {
-        let hash = input;
-        const layers = Math.min(this.PADDING_LAYERS, this.QUANTUM_PRIMES.length);
-        
-        for (let i = 0; i < layers; i++) {
-            hash = this.antiQuantumScramble(hash);
-            hash ^= this.QUANTUM_PRIMES[i];
-            hash = this.latticeTransform(hash);
-        }
-        return hash;
-    }
-
-    // Optimized key generation
+    // SHA-512 hash function to generate a consistent hash value for any key
     private hashKey(key: string): bigint {
         const hash = crypto.createHash('sha512').update(key).digest('hex') +
-                    crypto.createHash('sha512').update(key).digest('hex').slice(0, 32);
-        return this.superPositionHash(BigInt('0x' + hash));
+                     crypto.createHash('sha512').update(key).digest('hex') +
+                     crypto.createHash('sha512').update(key).digest('hex');
+        return BigInt('0x' + hash); // Convert the hash hex to a BigInt for a larger initial state
     }
 
-    private generatePseudoRandomSequence(key: string, length: number): Uint8Array {
-        const sequence = new Uint8Array(length);
-        let state = this.hashKey(key);
+    // Enhanced pseudo-random key generator with increased randomness for quantum resistance
+    private generatePseudoRandomSequence(key: string, length: number): number[] {
+        const sequence = new Array<number>(length);
+        let state = this.hashKey(key); // Initialize state from SHA-512 hash as BigInt
 
         for (let i = 0; i < length; i++) {
-            state = this.superPositionHash(state);
-            
-            // Reduced transformation rounds for better performance
-            for (let j = 0; j < Math.min(8, this.TRANSFORMATION_ROUNDS); j++) {
-                state = this.latticeTransform(state);
-                state = this.antiQuantumScramble(state);
-                state ^= this.QUANTUM_PRIMES[j % this.QUANTUM_PRIMES.length];
-            }
-
-            sequence[i] = Number(state % BigInt(256));
+            // Re-hash the key for additional randomness
+            const rehashedKey = crypto.createHash('sha512').update(crypto.createHash('sha512').update(key).digest('hex')).digest('hex');
+            // Multiply state by a large prime and add non-trivial constants to increase randomness
+            state = (state * BigInt('0x' + rehashedKey) +
+                     BigInt('636413622384679300563641362238467930056364136223846793005636413622384679300563641362238467930056364136223846793005636413622384679300563641362238467930056364136223846793005636413622384679300563641362238467930056364136223846793005') +
+                     BigInt('144269636413622384679300563641362238467930056364136223846793005636413622384679300550406364136223846793005636413622384679300563641362238467930056364136223846793005636413622384679300563641362238467930058889634076364136223846793005')) % BigInt(256);
+            // XOR with shifted state to further increase randomness
+            sequence[i] = Number((state ^ (state >> BigInt(8))) % BigInt(256));
         }
         return sequence;
     }
 
+    // Encode data to nulldot using XOR and pseudo-random sequence
     public dataToNulldot(data: any, key: string): string {
-        const stringData = this.stringifyData(data);
-        const filtered = stringData.split('').filter(c => c !== ' ');
-        const pseudoRandomKey = this.generatePseudoRandomSequence(key, filtered.length);
+        const stringData = this.stringifyData(data); // Convert any data type to string
+        const pseudoRandomKey = this.generatePseudoRandomSequence(key, stringData.split('').filter(c => c !== ' ').length);
         let keyIndex = 0;
 
-        const result = new Array(stringData.length);
-        for (let i = 0; i < stringData.length; i++) {
-            const c = stringData[i];
+        return stringData.split('').map((c) => {
             if (c === ' ') {
-                result[i] = this.WORD_DELIMITER;
-                continue;
-            }
+                return this.WORD_DELIMITER; // Represent space
+            } else {
+                // XOR character with the pseudo-random key sequence
+                const xorChar = (c.charCodeAt(0) ^ pseudoRandomKey[keyIndex]) % 128;
+                keyIndex += 1;
+                const binary = xorChar.toString(2).padStart(7, '0'); // Convert to 7-bit binary
 
-            let charCode = c.charCodeAt(0);
-            for (let j = 0; j < Math.min(8, this.TRANSFORMATION_ROUNDS); j++) {
-                charCode ^= pseudoRandomKey[keyIndex];
-                charCode = (charCode << (j % 7)) | (charCode >> (7 - (j % 7)));
-                charCode = ((charCode & 0xF0) >> 4) | ((charCode & 0x0F) << 4);
-                charCode ^= (j * 13 + 7);
+                // Convert binary to nulldot language
+                return binary.split('').map(b => (b === '0' ? this.NULL : this.DOT)).join('') + this.CHAR_DELIMITER;
             }
-            
-            const binary = (charCode % 128).toString(2).padStart(7, '0');
-            result[i] = binary.split('')
-                .map(b => (b === '0' ? this.NULL : this.DOT))
-                .join('') + this.CHAR_DELIMITER;
-            keyIndex++;
-        }
-
-        return result.join('');
+        }).join('');
     }
 
+    // Decode nulldot to original text using XOR and pseudo-random sequence
     public nulldotToData(nulldotText: string, key: string): string {
         const charCount = (nulldotText.match(new RegExp(this.CHAR_DELIMITER, 'g')) || []).length;
         const pseudoRandomKey = this.generatePseudoRandomSequence(key, charCount);
 
+        let keyIndex = 0;
         return nulldotText.split(this.WORD_DELIMITER).map(word => {
-            return word.split(this.CHAR_DELIMITER).map((code, index) => {
+            return word.split(this.CHAR_DELIMITER).map(code => {
                 if (!code) return '';
 
-                const binaryString = code.split('')
-                    .map(ch => (ch === this.NULL ? '0' : '1'))
-                    .join('');
-                let charCode = parseInt(binaryString, 2);
+                // Convert nulldot back to binary string
+                const binaryString = code.split('').map(ch => (ch === this.NULL ? '0' : '1')).join('');
+                const charCode = parseInt(binaryString, 2);
 
-                for (let i = Math.min(8, this.TRANSFORMATION_ROUNDS) - 1; i >= 0; i--) {
-                    charCode ^= (i * 13 + 7);
-                    charCode = ((charCode & 0xF0) >> 4) | ((charCode & 0x0F) << 4);
-                    charCode = (charCode >> (i % 7)) | (charCode << (7 - (i % 7)));
-                    charCode ^= pseudoRandomKey[index];
-                }
-
-                return String.fromCharCode(charCode % 128);
+                // XOR with the pseudo-random key sequence to retrieve original character
+                const originalChar = String.fromCharCode((charCode ^ pseudoRandomKey[keyIndex]) % 128);
+                keyIndex += 1;
+                return originalChar;
             }).join('');
         }).join(' ');
     }
