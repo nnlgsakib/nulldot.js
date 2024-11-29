@@ -2,10 +2,6 @@
 
 **Nulldot.js** is a unique, quantum-prime-driven symmetric encryption library designed to protect sensitive information with an adaptable and innovative approach. Developed by [NLG Sakib](https://github.com/nnlgsakib), this library introduces advanced encryption techniques and customizable operators, making it both powerful and versatile for various secure data requirements.
 
-## About the Developer: NLG Sakib
-
-NLG Sakib is a developer specializing in cryptographic solutions, blockchain, and decentralized systems. Known for his expertise in blockchain and cybersecurity, Sakib has built several innovative encryption tools, including Nulldot.js, designed to provide enhanced data protection for modern security needs. Sakib's work is marked by a focus on novel mathematical applications, including quantum prime-based encryption and secure lattice transformations, which power the unique structure of Nulldot.js.
-
 ## Overview of Nulldot.js
 
 Nulldot.js uses symmetric encryption, where the same key is required for both encryption and decryption. It leverages quantum primes, lattice constants, and optimized bit rotation functions to transform data securely, offering a powerful alternative to traditional encryption methods.
@@ -139,6 +135,10 @@ console.log("Decrypted Data:", customDecrypted);
 1. **Quantum Primes and Lattice Constants**: The encryption algorithm applies mathematical constants for enhanced security.
 2. **Efficient Key Rotation**: Uses optimized rotation functions, making it challenging to decrypt data without the correct key.
 3. **Customizable Bit Manipulation**: Multiple transformations enhance data complexity and security against brute-force attacks.
+
+## About the Developer: NLG Sakib
+
+NLG Sakib is a developer specializing in cryptographic solutions, blockchain, and decentralized systems. Known for his expertise in blockchain and cybersecurity, Sakib has built several innovative encryption tools, including Nulldot.js, designed to provide enhanced data protection for modern security needs. Sakib's work is marked by a focus on novel mathematical applications, including quantum prime-based encryption and secure lattice transformations, which power the unique structure of Nulldot.js.
 
 ## License
 
